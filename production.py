@@ -3,13 +3,14 @@
 
 from trytond.model import ModelView, Workflow
 from trytond.pool import PoolMeta
+from trytond.i18n import gettext
+from trytond.exceptions import UserWarning
 
 __all__ = ['Production']
 
 
-class Production:
+class Production(metaclass=PoolMeta):
     __name__ = 'production'
-    __metaclass__ = PoolMeta
 
     @classmethod
     def __setup__(cls):
@@ -24,8 +25,7 @@ class Production:
     @Workflow.transition('cancel')
     def cancel(cls, productions):
         for production in productions:
-            cls.raise_user_warning('are_you_sure_%d' % production.id,
-                'are_you_sure', {
-                    'production': production.code,
-                })
+            raise UserWarning('are_you_sure_%d' % production.id, gettext(
+                    'production_cancel_warning.are_you_sure',
+                    production=production.code))
         super(Production, cls).cancel(productions)

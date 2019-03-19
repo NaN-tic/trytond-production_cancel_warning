@@ -120,7 +120,7 @@ Create an Inventory::
     >>> inventory_line2.quantity = 6
     >>> inventory.click('confirm')
     >>> inventory.state
-    u'done'
+    'done'
 
 Make a production::
 
@@ -132,7 +132,7 @@ Make a production::
     >>> production.quantity = 2
     >>> production.click('wait')
     >>> production.state
-    u'waiting'
+    'waiting'
     >>> production.click('cancel')
     >>> production.state
-    u'cancel'
+    'cancel'
