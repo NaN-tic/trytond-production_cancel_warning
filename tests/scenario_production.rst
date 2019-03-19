@@ -2,61 +2,28 @@
 Production Cancel Warning Scenario
 ==================================
 
-=============
-General Setup
-=============
-
 Imports::
 
     >>> import datetime
     >>> from dateutil.relativedelta import relativedelta
     >>> from decimal import Decimal
-    >>> from proteus import config, Model, Wizard
+    >>> from proteus import Model, Wizard
+    >>> from trytond.tests.tools import activate_modules
+    >>> from trytond.modules.company.tests.tools import create_company, \
+    ...     get_company
+    >>> from trytond.modules.production.production import BOM_CHANGES
     >>> today = datetime.date.today()
     >>> yesterday = today - relativedelta(days=1)
-
-Create database::
-
-    >>> config = config.set_trytond()
-    >>> config.pool.test = True
+    >>> before_yesterday = yesterday - relativedelta(days=1)
 
 Install production Module::
 
-    >>> Module = Model.get('ir.module.module')
-    >>> modules = Module.find([('name', '=', 'production')])
-    >>> Module.install([x.id for x in modules], config.context)
-    >>> Wizard('ir.module.module.install_upgrade').execute('upgrade')
+    >>> config = activate_modules('production')
 
 Create company::
 
-    >>> Currency = Model.get('currency.currency')
-    >>> CurrencyRate = Model.get('currency.currency.rate')
-    >>> Company = Model.get('company.company')
-    >>> Party = Model.get('party.party')
-    >>> company_config = Wizard('company.company.config')
-    >>> company_config.execute('company')
-    >>> company = company_config.form
-    >>> party = Party(name='Dunder Mifflin')
-    >>> party.save()
-    >>> company.party = party
-    >>> currencies = Currency.find([('code', '=', 'USD')])
-    >>> if not currencies:
-    ...     currency = Currency(name='Euro', symbol=u'$', code='USD',
-    ...         rounding=Decimal('0.01'), mon_grouping='[3, 3, 0]',
-    ...         mon_decimal_point=',')
-    ...     currency.save()
-    ...     CurrencyRate(date=today + relativedelta(month=1, day=1),
-    ...         rate=Decimal('1.0'), currency=currency).save()
-    ... else:
-    ...     currency, = currencies
-    >>> company.currency = currency
-    >>> company_config.execute('add')
-    >>> company, = Company.find()
-
-Reload the context::
-
-    >>> User = Model.get('res.user')
-    >>> config._context = User.get_preferences(True, config.context)
+    >>> _ = create_company()
+    >>> company = get_company()
 
 Create product::
 
@@ -64,42 +31,42 @@ Create product::
     >>> unit, = ProductUom.find([('name', '=', 'Unit')])
     >>> ProductTemplate = Model.get('product.template')
     >>> Product = Model.get('product.product')
-    >>> product = Product()
+
     >>> template = ProductTemplate()
     >>> template.name = 'product'
     >>> template.default_uom = unit
     >>> template.type = 'goods'
+    >>> template.producible = True
     >>> template.list_price = Decimal(30)
-    >>> template.cost_price = Decimal(20)
+    >>> product, = template.products
+    >>> product.cost_price = Decimal(20)
     >>> template.save()
-    >>> product.template = template
-    >>> product.save()
+    >>> product, = template.products
 
 Create Components::
 
-    >>> component1 = Product()
     >>> template1 = ProductTemplate()
     >>> template1.name = 'component 1'
     >>> template1.default_uom = unit
     >>> template1.type = 'goods'
     >>> template1.list_price = Decimal(5)
-    >>> template1.cost_price = Decimal(1)
+    >>> component1, = template1.products
+    >>> component1.cost_price = Decimal(1)
     >>> template1.save()
-    >>> component1.template = template1
-    >>> component1.save()
+    >>> component1, = template1.products
 
     >>> meter, = ProductUom.find([('name', '=', 'Meter')])
     >>> centimeter, = ProductUom.find([('name', '=', 'centimeter')])
-    >>> component2 = Product()
+
     >>> template2 = ProductTemplate()
     >>> template2.name = 'component 2'
     >>> template2.default_uom = meter
     >>> template2.type = 'goods'
     >>> template2.list_price = Decimal(7)
-    >>> template2.cost_price = Decimal(5)
+    >>> component2, = template2.products
+    >>> component2.cost_price = Decimal(5)
     >>> template2.save()
-    >>> component2.template = template2
-    >>> component2.save()
+    >>> component2, = template2.products
 
 Create Bill of Material::
 
@@ -126,6 +93,13 @@ Create Bill of Material::
     >>> product.boms.append(ProductBom(bom=bom))
     >>> product.save()
 
+    >>> ProductionLeadTime = Model.get('production.lead_time')
+    >>> production_lead_time = ProductionLeadTime()
+    >>> production_lead_time.product = product
+    >>> production_lead_time.bom = bom
+    >>> production_lead_time.lead_time = datetime.timedelta(1)
+    >>> production_lead_time.save()
+
 Create an Inventory::
 
     >>> Inventory = Model.get('stock.inventory')
@@ -144,8 +118,7 @@ Create an Inventory::
     >>> inventory.lines.append(inventory_line2)
     >>> inventory_line2.product = component2
     >>> inventory_line2.quantity = 6
-    >>> inventory.save()
-    >>> Inventory.confirm([inventory.id], config.context)
+    >>> inventory.click('confirm')
     >>> inventory.state
     u'done'
 
@@ -153,13 +126,13 @@ Make a production::
 
     >>> Production = Model.get('production')
     >>> production = Production()
+    >>> production.planned_date = today
     >>> production.product = product
     >>> production.bom = bom
     >>> production.quantity = 2
-    >>> production.cost
-    Decimal('25.0')
-    >>> production.save()
-    >>> Production.wait([production.id], config.context)
+    >>> production.click('wait')
+    >>> production.state
+    u'waiting'
     >>> production.click('cancel')
-    >>> production.state == 'cancel'
-    True
+    >>> production.state
+    u'cancel'
