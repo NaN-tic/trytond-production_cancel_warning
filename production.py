@@ -18,8 +18,11 @@ class Production(metaclass=PoolMeta):
     @ModelView.button
     @Workflow.transition('cancel')
     def cancel(cls, productions):
+        Warning = Pool().get('res.user.warning')        
         for production in productions:
-            raise UserWarning('are_you_sure_%d' % production.id, gettext(
+            key ='are_you_sure_%d' % production.id
+            if Warning.check(key):
+                raise UserWarning(key, gettext(
                     'production_cancel_warning.are_you_sure',
                     production=production.code))
         super(Production, cls).cancel(productions)
