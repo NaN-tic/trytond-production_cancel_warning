@@ -17,9 +17,9 @@ class Production(metaclass=PoolMeta):
     def cancel(cls, productions):
         Warning = Pool().get('res.user.warning')
         for production in productions:
-            key ='are_you_sure_%d' % production.id
+            key = 'are_you_sure_%d' % production.id
             if Warning.check(key):
                 raise UserWarning(key, gettext(
                     'production_cancel_warning.are_you_sure',
-                    production=production.code))
+                    production=production.number))
         super(Production, cls).cancel(productions)
