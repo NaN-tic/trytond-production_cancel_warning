@@ -12,8 +12,6 @@ class Production(metaclass=PoolMeta):
     __name__ = 'production'
 
     @classmethod
-    @ModelView.button
-    @Workflow.transition('cancel')
     def cancel(cls, productions):
         Warning = Pool().get('res.user.warning')
         for production in productions:

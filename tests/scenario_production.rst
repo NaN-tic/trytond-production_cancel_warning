@@ -135,4 +135,4 @@ Make a production::
     'waiting'
     >>> production.click('cancel')
     >>> production.state
-    'cancel'
+    'cancelled'
