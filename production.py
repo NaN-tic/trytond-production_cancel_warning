@@ -3,6 +3,7 @@
 from trytond.pool import PoolMeta, Pool
 from trytond.i18n import gettext
 from trytond.exceptions import UserWarning
+from trytond.model import ModelView
 
 __all__ = ['Production']
 
